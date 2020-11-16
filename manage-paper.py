@@ -22,15 +22,14 @@ def open_paper(inf: Path):
     if len(workspaces) > 1:  # we have multiple monitors
         for workspace in workspaces:
             if not workspace["focused"]:
-                other = workspace["name"].strip()
+                other = workspace["name"]
             else:
-                current = workspace["name"].strip()
+                current = workspace["name"]
 
         cmd = [
             "i3-msg",
             "workspace",
-            other,
-            ";",
+            f"{other};",
             "exec",
             "zathura",
             inf.resolve(),
