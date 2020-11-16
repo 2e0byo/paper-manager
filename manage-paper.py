@@ -2,7 +2,9 @@
 
 """Script to manage papers."""
 
+from json import loads
 from pathlib import Path
+from subprocess import run
 
 from slugify import slugify
 
@@ -11,18 +13,51 @@ def safe_prompt(prompt: str):
     """Prompt for text allowing user to can el."""
 
 
+def open_paper(inf: Path):
+    """Open paper in most appropriate way, either on another monitor or on this one."""
+
+    cmd = ["i3-msg", "-t", "get_workspaces"]
+    workspaces = run(cmd, capture_output=True, encoding="utf8")
+    workspaces = loads(workspaces.stdout)
+    if len(workspaces) > 1:  # we have multiple monitors
+        for workspace in workspaces:
+            if not workspace["focused"]:
+                other = workspace["name"]
+            else:
+                current = workspace["name"]
+
+        cmd = [
+            "i3-msg",
+            "workspace",
+            other,
+            ";",
+            "exec",
+            "zathura",
+            inf.resolve(),
+            ";",
+            "workspace",
+            current,
+        ]
+        run(cmd)
+    else:
+        cmd = ["i3-msg", "exec", "zathura", inf.resolve()]
+        run(cmd)
+
+
 def rename_paper(inf: Path) -> Path:
     while True:
-        author = input("Enter Principal Author ")
+        author = input("Enter Principal Author: ")
         print("A descriptive title is something one might look the paper up under.")
         print("This is probably the subtitle.")
-        title = input("Enter descriptive title ")
-        yn = input("Continue? [Yn]")
-        if "n" not in yn.upper:
+        title = input("Enter descriptive title: ")
+        yn = input("Continue? [Yn] ")
+        if "n" not in yn.upper():
             break
     author = slugify(author, separator="_")
     title = slugify(title, separator="_")
-    return inf.rename(inf.with_name(f"{title}-{author}.pdf"))
+    cmd = ["pkill", "-f", f"zathura {inf.resolve()}"]
+    run(cmd)
+    return inf.rename(inf.with_name(f"{author}-{title}.pdf"))
 
 
 def dejstorify(paper: Path) -> Path:
@@ -52,6 +87,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     inf = Path(args.INPUT)
+    open_paper(inf)
 
     if not args.skip_rename:
         inf = rename_paper(inf)
