@@ -22,9 +22,9 @@ def open_paper(inf: Path):
     if len(workspaces) > 1:  # we have multiple monitors
         for workspace in workspaces:
             if not workspace["focused"]:
-                other = workspace["name"]
+                other = workspace["name"].strip()
             else:
-                current = workspace["name"]
+                current = workspace["name"].strip()
 
         cmd = [
             "i3-msg",
