@@ -59,11 +59,13 @@ def open_paper(inf: Path):
 
 
 def rename_paper(inf: Path) -> Path:
+    pdf = PdfFileReader(inf.open("rb"))
+    pdf.documentInfo.author
     while True:
-        author = input("Enter Principal Author: ")
+        author = input_with_prefill("Enter Principal Author: ", pdf.documentInfo.author)
         print("A descriptive title is something one might look the paper up under.")
         print("This is probably the subtitle.")
-        title = input("Enter descriptive title: ")
+        title = input_with_prefill("Enter descriptive title: ", pdf.documentInfo.title)
         yn = input("Continue? [Yn] ")
         if "n" not in yn.upper():
             break
