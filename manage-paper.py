@@ -6,7 +6,9 @@ import readline
 from json import loads
 from pathlib import Path
 from subprocess import run
+from tempfile import TemporaryDirectory
 
+from PyPDF2 import PdfFileReader, PdfFileWriter
 from slugify import slugify
 
 
@@ -74,7 +76,43 @@ def rename_paper(inf: Path) -> Path:
 
 def dejstorify(paper: Path) -> Path:
     """Try to remove jstor page from pdf."""
-    raise NotImplementedError("Not yet implemented, but easy enough! do so now!")
+
+    with TemporaryDirectory(dir="./") as tmpdir:
+        pdf = PdfFileReader(paper.open("rb"))
+        max_size = pdf.getPage(0).mediaBox
+        larger_pages = []
+        writer = PdfFileWriter()
+        for pgno, page in enumerate(pdf.pages):
+            cropbox = page.cropBox
+            mediabox = page.mediaBox
+            max_size = max(mediabox, max_size)
+
+            if cropbox > max_size or mediabox < max_size:
+                writer.addPage(page)
+            else:
+                larger_pages.append(pgno)
+
+        if len(larger_pages) > 1:
+            raise NotImplementedError(
+                "Unable to handle multiple pages of differing sizes\
+                ---implement here now you've found a source."
+            )
+        elif len(larger_pages) == 0:
+            print("No jstor page found, skipping")
+            pre_crop = paper
+
+        pre_crop = Path(f"{tmpdir}/{paper.name}")
+        writer.write(pre_crop.open("wb"))
+
+        # implement banner removal here
+
+        post_crop = pre_crop
+
+        return post_crop.replace(paper)
+
+
+# paper = Path("/home/john/hutter-pdfs/project_muse_636205.pdf")
+# dejstorify(paper)
 
 
 # pdfcrop --margins [] --clip
@@ -92,6 +130,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-d",
         "--de-jstorify",
+        action="store_true",
         help="De-Jstorify the pdf, i.e. delete cover pages and banners.",
     )
     parser.add_argument("--skip-rename", help="Skip rename.", action="store_true")
