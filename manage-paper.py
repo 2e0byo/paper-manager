@@ -113,10 +113,6 @@ def dejstorify(paper: Path) -> Path:
         return post_crop.replace(paper)
 
 
-# paper = Path("/home/john/hutter-pdfs/project_muse_636205.pdf")
-# dejstorify(paper)
-
-
 # pdfcrop --margins [] --clip
 # pdfbook cropped-tmp (use python tmpdir)
 # return tmpbooklet file
