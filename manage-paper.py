@@ -30,13 +30,12 @@ def open_paper(inf: Path):
             "i3-msg",
             "workspace",
             f"{other};",
-            "exec",
-            "zathura",
-            inf.resolve(),
+            f'exec "zathura \\"{inf.resolve()}\\""',
             ";",
             "workspace",
             current,
         ]
+        print(" ".join(cmd))
         run(cmd)
     else:
         cmd = ["i3-msg", "exec", "zathura", inf.resolve()]
