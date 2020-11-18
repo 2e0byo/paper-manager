@@ -2,6 +2,7 @@
 
 """Script to manage papers."""
 
+import readline
 from json import loads
 from pathlib import Path
 from subprocess import run
@@ -9,8 +10,21 @@ from subprocess import run
 from slugify import slugify
 
 
-def safe_prompt(prompt: str):
-    """Prompt for text allowing user to can el."""
+def input_with_prefill(prompt, text):
+    """
+    Input with prefill by abusing readline hook.
+
+    Copied from https://stackoverflow.com/questions/8505163/is-it-possible-to-prefill-a-input-in-python-3s-command-line-interface
+    """
+
+    def hook():
+        readline.insert_text(text)
+        readline.redisplay()
+
+    readline.set_pre_input_hook(hook)
+    result = input(prompt)
+    readline.set_pre_input_hook()
+    return result
 
 
 def open_paper(inf: Path):
