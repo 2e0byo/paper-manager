@@ -215,9 +215,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     inf = Path(args.INPUT)
-    open_paper(inf)
 
     if not args.skip_rename:
+        open_paper(inf)
         inf = rename_paper(inf)
 
     if args.de_jstorify:
