@@ -4,6 +4,7 @@
 
 import readline
 from json import loads
+from os import chdir, getcwd
 from pathlib import Path
 from subprocess import run
 from tempfile import TemporaryDirectory
@@ -192,6 +193,76 @@ def dejstorify(paper: Path) -> Path:
         return post_crop.replace(paper)
 
 
+def test_for_text(inf: Path) -> bool:
+    """Test whether or no a file appears to contain text."""
+    pdf = PdfFileReader(inf.open("rb"))
+    if pdf.getNumPages() > 1:
+        page = pdf.getPage(1)
+    else:
+        page = pdf.getPage(0)
+    return True if page.extractText().strip() else False
+
+
+def ocr(inf: Path, lang):
+    inf = inf.resolve()
+
+    pwd = getcwd()
+    with TemporaryDirectory(
+        dir=".",
+    ) as tmpdir:
+        chdir(tmpdir)
+        # burst input into pages
+        cmd = [
+            "pdftk",
+            inf.resolve(),
+            "burst",
+            "output",
+            inf.stem + "_%04d.pdf",
+        ]
+        run(cmd)
+
+        print("Converting to images")
+        # can we use pdfimages?
+        pdfimages = True
+
+        cmd = ["pdfimages", "-list"]
+        for pdf in Path("./").glob("*.pdf"):
+            images = run(cmd + [pdf], encoding="utf8", capture_output=True).stdout
+            if len(images.strip().split("\n")) > 3:
+                pdfimages = False
+                break
+
+        if not pdfimages:
+            print("Using Imagemagick")
+            cmd = (
+                "find . -name '*.pdf' | parallel "
+                + " --bar --max-args 1 convert -density 300 {} {}.png \\;"
+            )
+            run(cmd, shell=True)
+
+        else:
+            print("Using pdfimages")
+            cmd = (
+                "find . -name '*.pdf' | parallel --bar --max-args 1 "
+                "pdfimages -j -tiff {} {}-img \\;"
+            )
+            run(cmd, shell=True)
+
+        print("Running Tesseract")
+        cmd = (
+            'find . -maxdepth 1 -name "*.tif" -o -name "*.png" -o -name "*.jpeg" |'
+            "parallel --bar --maxargs 1 "
+            "-i{} env OMP_THREAD_LIMIT=1 tesseract {} {}-ocr -l " + lang + " pdf \\;"
+        )
+        run(cmd, shell=True)
+
+        bak = inf.rename(inf.with_name(inf.name + ".bak"))
+
+        cmd = f"pdftk *-ocr.pdf output {inf.resolve()}"
+        run(cmd, shell=True, check_output=True)
+        chdir(pwd)
+
+
 # pdfcrop --margins [] --clip
 # pdfbook cropped-tmp (use python tmpdir)
 # return tmpbooklet file
@@ -211,6 +282,10 @@ if __name__ == "__main__":
         help="De-Jstorify the pdf, i.e. delete cover pages and banners.",
     )
     parser.add_argument("--skip-rename", help="Skip rename.", action="store_true")
+    parser.add_argument("--ocr", help="Ocr if appropriate", action="store_true")
+    parser.add_argument(
+        "--ocr-langs", help="Ocr languages for tesseract", default="eng+fra+lat+grc"
+    )
 
     args = parser.parse_args()
 
@@ -222,3 +297,10 @@ if __name__ == "__main__":
 
     if args.de_jstorify:
         dejstorify(inf)
+
+    if args.ocr:
+        if not test_for_text(inf):
+            print("Applying OCR")
+            ocr(inf, args.ocr_langs)
+        else:
+            print("No need to OCR")
