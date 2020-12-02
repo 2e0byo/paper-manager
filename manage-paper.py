@@ -271,7 +271,7 @@ def ocr(inf: Path, lang):
 
         bak = inf.rename(inf.with_name(inf.name + ".bak"))
 
-        cmd = f"pdftk *-ocr.pdf output {inf.resolve()}"
+        cmd = f'pdftk *-ocr.pdf output "{inf.resolve()}"'
         run(cmd, shell=True, check=True)
         chdir(pwd)
 
