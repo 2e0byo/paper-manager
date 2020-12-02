@@ -179,6 +179,12 @@ def dejstorify(paper: Path) -> Path:
                 larger_pages.append(pgno)
             else:
                 smaller += 1
+                footer = test_footer(page)
+                if footer == "jstor":
+                    crop = (0, 25)
+                    page.cropBox.setLowerLeft(
+                        tuple(map(sum, zip(page.cropBox.getLowerLeft(), crop)))
+                    )
                 writer.addPage(page)
 
         if len(larger_pages) > 1:
@@ -194,8 +200,6 @@ def dejstorify(paper: Path) -> Path:
 
         pre_crop = Path(f"{tmpdir}/{paper.name}")
         writer.write(pre_crop.open("wb"))
-
-        # implement banner removal here
 
         post_crop = pre_crop
 
