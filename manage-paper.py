@@ -249,7 +249,7 @@ def ocr(inf: Path, lang):
             print("Using Imagemagick")
             cmd = (
                 "find . -name '*.pdf' | parallel "
-                + " --bar --max-args 1 convert -density 300 {} {}.png \\;"
+                + " --bar --max-args 1 env MAGICK_THREAD_LIMIT=1 convert -density 300 {} {}.png \\;"
             )
             run(cmd, shell=True)
 
@@ -257,7 +257,7 @@ def ocr(inf: Path, lang):
             print("Using pdfimages")
             cmd = (
                 "find . -name '*.pdf' | parallel --bar --max-args 1 "
-                "pdfimages -j -tiff {} {}-img \\;"
+                "pdfimages -j -png {} {}-img \\;"
             )
             run(cmd, shell=True)
 
