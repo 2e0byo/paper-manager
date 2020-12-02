@@ -10,6 +10,7 @@ from subprocess import run
 from tempfile import TemporaryDirectory
 
 from PyPDF2 import PdfFileReader, PdfFileWriter
+from PyPDF2.pdf import PageObject
 from slugify import slugify
 
 
@@ -152,6 +153,14 @@ def is_large(page, media_size_discrepancy, crop_size_discrepancy):
             )
 
     return False
+
+
+def test_footer(page: PageObject):
+    """Test whether a pdf contains a 'this content downloaded...' footer."""
+    if "This content downloaded from" in page.extractText():
+        return "jstor"
+    else:
+        return None
 
 
 def dejstorify(paper: Path) -> Path:
