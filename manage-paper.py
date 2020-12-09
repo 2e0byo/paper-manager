@@ -181,8 +181,8 @@ def dejstorify(paper: Path) -> Path:
                 smaller += 1
                 footer = test_footer(page)
                 if footer == "jstor":
-                    crop = (0, 25)
                     print("Cropping out jstor footer.")
+                    crop = (0, 60)
                     page.cropBox.setLowerLeft(
                         tuple(map(sum, zip(page.cropBox.getLowerLeft(), crop)))
                     )
