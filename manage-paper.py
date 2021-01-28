@@ -172,32 +172,38 @@ def dejstorify(paper: Path) -> Path:
         media_size_discrepancy, crop_size_discrepancy = get_significant_discrepancy(pdf)
 
         larger_pages = []
+        smaller_pages = []
         writer = PdfFileWriter()
-        smaller = 0
-        for pgno, page in enumerate(pdf.pages):
+        for page in pdf.pages:
             if is_large(page, media_size_discrepancy, crop_size_discrepancy):
-                larger_pages.append(pgno)
+                larger_pages.append(page)
             else:
-                smaller += 1
-                footer = test_footer(page)
-                if footer == "jstor":
-                    print("Cropping out jstor footer.")
-                    crop = (0, 60)
-                    page.cropBox.setLowerLeft(
-                        tuple(map(sum, zip(page.cropBox.getLowerLeft(), crop)))
-                    )
-                writer.addPage(page)
+                smaller_pages.append(page)
 
-        if len(larger_pages) > 1:
-            print(len(larger_pages))
+        content = None
+        if len(larger_pages) == 1:
+            content = smaller_pages if smaller_pages else larger_pages
+        elif len(smaller_pages) == 1:
+            content = larger_pages if larger_pages else smaller_pages
+
+        if not content:
             raise NotImplementedError(
-                "Unable to handle multiple pages of differing sizes\
-                ---implement here now you've found a source."
+                f"Unable to handle multiple page sizes: {len(larger_pages)}"
+                f"larger pages and {len(smaller_pages)} smaller pages"
             )
-        elif len(larger_pages) == 0:
-            print(smaller)
-            print("No jstor page found, skipping")
-            pre_crop = paper
+
+        for page in content:
+            footer = test_footer(page)
+            if footer == "jstor":
+                print("Cropping out jstor footer.")
+                crop = (0, 60)
+                page.cropBox.setLowerLeft(
+                    tuple(map(sum, zip(page.cropBox.getLowerLeft(), crop)))
+                )
+            writer.addPage(page)
+
+        if not larger_pages or not smaller_pages:
+            print("No jstor page found,")
 
         pre_crop = Path(f"{tmpdir}/{paper.name}")
         writer.write(pre_crop.open("wb"))
