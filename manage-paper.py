@@ -1,15 +1,14 @@
 #!/usr/bin/python
 
 """Script to manage papers."""
+
 import readline
 from json import loads
 from os import chdir, getcwd
 from pathlib import Path
 from subprocess import run
 from tempfile import TemporaryDirectory
-from typing import List
 
-from devtools import debug
 from PyPDF2 import PdfFileReader, PdfFileWriter
 from PyPDF2.pdf import PageObject
 from slugify import slugify
@@ -90,8 +89,8 @@ def get_significant_discrepancy(pdf):
     max_media_size = max([page.mediaBox for page in pdf.pages])
     min_media_size = min([page.mediaBox for page in pdf.pages])
     if (
-        abs(max_media_size.getWidth() - min_media_size.getWidth()) < 20
-        and abs(max_media_size.getHeight() - min_media_size.getHeight()) < 20
+        abs(max_media_size.getWidth() - min_media_size.getWidth()) < 10
+        and abs(max_media_size.getHeight() - min_media_size.getHeight()) < 10
     ):
         media_size_discrepancy = None
     else:
@@ -105,8 +104,8 @@ def get_significant_discrepancy(pdf):
     max_crop_size = max([page.cropBox for page in pdf.pages])
     min_crop_size = min([page.cropBox for page in pdf.pages])
     if (
-        abs(max_crop_size.getWidth() - min_crop_size.getWidth()) < 20
-        and abs(max_crop_size.getHeight() - min_crop_size.getHeight()) < 20
+        abs(max_crop_size.getWidth() - min_crop_size.getWidth()) < 10
+        and abs(max_crop_size.getHeight() - min_crop_size.getHeight()) < 10
     ):
         crop_size_discrepancy = None
     else:
@@ -116,8 +115,6 @@ def get_significant_discrepancy(pdf):
             "max": min_crop_size,  # this is not an error
             "min": max_crop_size,  # largest cropbox = smallest page
         }
-
-    debug(media_size_discrepancy, crop_size_discrepancy)
 
     return media_size_discrepancy, crop_size_discrepancy
 
@@ -129,12 +126,6 @@ def is_large(page, media_size_discrepancy, crop_size_discrepancy):
 
     cropbox = page.cropBox
     mediabox = page.mediaBox
-    print(
-        mediabox.getHeight(),
-        mediabox.getWidth(),
-        cropbox.getHeight(),
-        cropbox.getWidth(),
-    )
 
     if media_size_discrepancy:
         if any(
@@ -176,44 +167,34 @@ def test_footer(page: PageObject):
         return None
 
 
-def find_cover_page(pdf: PdfFileReader) -> List:
-    """Find cover page in pdf."""
-    media_size_discrepancy, crop_size_discrepancy = get_significant_discrepancy(pdf)
-
-    larger_pages = []
-    smaller_pages = []
-    writer = PdfFileWriter()
-    i = 0
-    for page in pdf.pages:
-        i += 1
-        if is_large(page, media_size_discrepancy, crop_size_discrepancy):
-            print(i, "is large")
-            larger_pages.append(page)
-        else:
-            print(i, "is small")
-            smaller_pages.append(page)
-
-    if len(larger_pages) == 1:
-        return smaller_pages
-    elif len(smaller_pages) == 1:
-        return larger_pages
-    elif len(smaller_pages) and len(larger_pages):
-        raise NotImplementedError(
-            f"Unable to handle multiple page sizes: {len(larger_pages)}"
-            f"larger pages and {len(smaller_pages)} smaller pages"
-        )
-    else:
-        print("No cover page found")
-        return None
-
-
 def dejstorify(paper: Path) -> Path:
     """Try to remove jstor page from pdf."""
 
     with TemporaryDirectory(dir="./") as tmpdir:
         pdf = PdfFileReader(paper.open("rb"))
-        cover_page = find_cover_page(pdf)
-        content = cover_page if cover_page else pdf.pages
+
+        media_size_discrepancy, crop_size_discrepancy = get_significant_discrepancy(pdf)
+
+        larger_pages = []
+        smaller_pages = []
+        writer = PdfFileWriter()
+        for page in pdf.pages:
+            if is_large(page, media_size_discrepancy, crop_size_discrepancy):
+                larger_pages.append(page)
+            else:
+                smaller_pages.append(page)
+
+        content = None
+        if len(larger_pages) == 1:
+            content = smaller_pages if smaller_pages else larger_pages
+        elif len(smaller_pages) == 1:
+            content = larger_pages if larger_pages else smaller_pages
+
+        if not content:
+            raise NotImplementedError(
+                f"Unable to handle multiple page sizes: {len(larger_pages)}"
+                f"larger pages and {len(smaller_pages)} smaller pages"
+            )
 
         for page in content:
             footer = test_footer(page)
@@ -224,6 +205,9 @@ def dejstorify(paper: Path) -> Path:
                     tuple(map(sum, zip(page.cropBox.getLowerLeft(), crop)))
                 )
             writer.addPage(page)
+
+        if not larger_pages or not smaller_pages:
+            print("No jstor page found,")
 
         pre_crop = Path(f"{tmpdir}/{paper.name}")
         writer.write(pre_crop.open("wb"))
