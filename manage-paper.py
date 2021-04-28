@@ -37,12 +37,16 @@ def open_paper(inf: Path):
     cmd = ["i3-msg", "-t", "get_workspaces"]
     workspaces = run(cmd, capture_output=True, encoding="utf8")
     workspaces = loads(workspaces.stdout)
-    if len(workspaces) > 1:  # we have multiple monitors
-        for workspace in workspaces:
-            if not workspace["focused"]:
-                other = workspace["name"]
-            else:
-                current = workspace["name"]
+    monitors = set(w["output"] for w in workspaces)
+    if len(monitors) > 1:  # we might multiple monitors
+        current = [w for w in workspaces if w["focused"]][0]
+        monitors.discard(current["output"])
+        current = current["name"]
+        other = [
+            w["name"]
+            for w in workspaces
+            if w["output"] == list(monitors)[0] and w["visible"]
+        ][0]
 
         cmd = [
             "i3-msg",
