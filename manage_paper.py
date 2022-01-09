@@ -179,7 +179,6 @@ def find_cover_page(pdf: PdfFileReader) -> List:
 
     larger_pages = []
     smaller_pages = []
-    writer = PdfFileWriter()
     i = 0
     for page in pdf.pages:
         i += 1
@@ -209,6 +208,7 @@ def dejstorify(paper: Path) -> Path:
         pdf = PdfFileReader(paper.open("rb"))
         cover_page = find_cover_page(pdf)
         content = cover_page if cover_page else pdf.pages
+        writer = PdfFileWriter()
 
         for page in content:
             footer = test_footer(page)
