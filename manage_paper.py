@@ -9,7 +9,6 @@ from subprocess import run
 from tempfile import TemporaryDirectory
 from typing import List
 
-from devtools import debug
 from PyPDF2 import PdfFileReader, PdfFileWriter
 from PyPDF2.pdf import PageObject
 from slugify import slugify
@@ -117,8 +116,6 @@ def get_significant_discrepancy(pdf):
             "min": max_crop_size,  # largest cropbox = smallest page
         }
 
-    debug(media_size_discrepancy, crop_size_discrepancy)
-
     return media_size_discrepancy, crop_size_discrepancy
 
 
@@ -187,10 +184,8 @@ def find_cover_page(pdf: PdfFileReader) -> List:
     for page in pdf.pages:
         i += 1
         if is_large(page, media_size_discrepancy, crop_size_discrepancy):
-            print(i, "is large")
             larger_pages.append(page)
         else:
-            print(i, "is small")
             smaller_pages.append(page)
 
     if len(larger_pages) == 1:
