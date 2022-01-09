@@ -7,11 +7,15 @@ from os import chdir, getcwd
 from pathlib import Path
 from subprocess import run
 from tempfile import TemporaryDirectory
+from time import sleep
 from typing import List
 
+from i3ipc import Connection
 from PyPDF2 import PdfFileReader, PdfFileWriter
 from PyPDF2.pdf import PageObject
 from slugify import slugify
+
+i3 = Connection()
 
 
 def input_with_prefill(prompt, text):
@@ -31,37 +35,41 @@ def input_with_prefill(prompt, text):
     return result
 
 
+def file_opened(fn: str, output: str):
+    con = i3.get_tree()
+    windows = con.find_titled(fn)
+    return any(x for x in windows if x.focused and x.ipc_data["output"] == output)
+
+
 def open_paper(inf: Path):
     """Open paper in most appropriate way, either on another monitor or on this one."""
 
-    cmd = ["i3-msg", "-t", "get_workspaces"]
-    workspaces = run(cmd, capture_output=True, encoding="utf8")
-    workspaces = loads(workspaces.stdout)
-    monitors = set(w["output"] for w in workspaces)
-    if len(monitors) > 1:  # we might multiple monitors
-        current = [w for w in workspaces if w["focused"]][0]
-        monitors.discard(current["output"])
-        current = current["name"]
-        other = [
-            w["name"]
-            for w in workspaces
-            if w["output"] == list(monitors)[0] and w["visible"]
-        ][0]
+    workspaces = i3.get_workspaces()
+    monitors = set(x.output for x in workspaces)
+    con = i3.get_tree()
 
-        cmd = [
-            "i3-msg",
-            "workspace",
-            f"{other};",
-            f'exec "zathura \\"{inf.resolve()}\\""',
-            ";",
-            "workspace",
-            current,
-        ]
-        print(" ".join(cmd))
-        run(cmd)
+    if len(monitors) > 1:  # we might multiple monitors
+        current = next(x for x in workspaces if x.focused)
+        monitors.discard(current.output)
+        other_monitor = next(iter(monitors))  # tweak if more than 2
+        current = current.name
+        other = next(
+            x.name for x in workspaces if x.output == other_monitor and x.visible
+        )
+
+        con.command(f"workspace {other}")
+        fn = str(inf.resolve())
+        con.command(f'exec "zathura \\"{fn}\\""')
+
+        # wait for file to open so i3 focuses automatically
+        while not file_opened(fn, other_monitor):
+            sleep(0.1)
+        sleep(0.1)
+
+        con.command(f"workspace {current}")
+
     else:
-        cmd = ["i3-msg", "exec", "zathura", inf.resolve()]
-        run(cmd)
+        con.command(f'exec "zathura \\"{inf.resolve()}\\""')
 
 
 def rename_paper(inf: Path) -> Path:
