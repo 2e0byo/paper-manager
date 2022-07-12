@@ -5,6 +5,7 @@ import readline
 from json import loads
 from os import chdir, getcwd
 from pathlib import Path
+from shutil import copy
 from subprocess import run
 from tempfile import TemporaryDirectory
 from time import sleep
@@ -333,6 +334,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ocr-langs", help="Ocr languages for tesseract", default="eng+fra+lat+grc"
     )
+    parser.add_argument("-o", "--outdir", help="outdir", type=Path)
 
     args = parser.parse_args()
 
@@ -351,3 +353,7 @@ if __name__ == "__main__":
             ocr(inf, args.ocr_langs)
         else:
             print("No need to OCR")
+
+    if args.outdir:
+        copy(inf, args.outdir / inf.name)
+        inf.unlink()
