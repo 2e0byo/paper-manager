@@ -37,8 +37,12 @@ def input_with_prefill(prompt, text):
 
 def file_opened(fn: str, output: str):
     con = i3.get_tree()
-    windows = con.find_titled(fn)
-    return any(x for x in windows if x.focused and x.ipc_data["output"] == output)
+    windows = con.find_titled(fn.split("/")[1])
+    return any(
+        x
+        for x in windows
+        if x.name == fn and x.focused and x.ipc_data["output"] == output
+    )
 
 
 def open_paper(inf: Path):
