@@ -12,8 +12,7 @@ from time import sleep
 from typing import List
 
 from i3ipc import Connection
-from PyPDF2 import PdfFileReader, PdfFileWriter
-from PyPDF2.pdf import PageObject
+from PyPDF2 import PageObject, PdfFileReader, PdfFileWriter
 from slugify import slugify
 
 i3 = Connection()
