@@ -87,11 +87,13 @@ def rename_paper(inf: Path) -> Path:
         yn = input("Continue? [Yn] ")
         if "n" not in yn.upper():
             break
-    author = slugify(author, separator="_")
-    title = slugify(title, separator="_")
+    name = slugify(author, separator="_")
+    if name:
+        name += "-"
+    name += slugify(title, separator="_")
     cmd = ["pkill", "-f", f"zathura {inf.resolve()}"]
     run(cmd)
-    return inf.rename(inf.with_name(f"{author}-{title}.pdf"))
+    return inf.rename(inf.with_stem(name))
 
 
 def get_significant_discrepancy(pdf):
