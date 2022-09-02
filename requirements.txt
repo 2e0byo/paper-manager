@@ -1,5 +1,3 @@
 i3ipc
 PyPDF2
-python-xlib
-six
-slugify
+python-slugify
