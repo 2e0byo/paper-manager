@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
 """Script to manage papers."""
+import asyncio
 import readline
-from json import loads
+from contextlib import suppress
+from enum import Enum, auto
 from os import chdir, getcwd
 from pathlib import Path
 from shutil import copy
@@ -11,11 +13,30 @@ from tempfile import TemporaryDirectory
 from time import sleep
 from typing import List
 
+from hyprland import Dispatch
+from hyprland.info import Info
 from i3ipc import Connection
 from PyPDF2 import PageObject, PdfFileReader, PdfFileWriter
 from slugify import slugify
 
-i3 = Connection()
+
+class WindowManagers(Enum):
+    NONE = auto()
+    I3 = auto()
+    HYPRLAND = auto()  # yeah, yeah, it's a compositor...
+
+
+window_manager = WindowManagers.NONE
+try:
+    i3 = Connection()
+    window_manager = WindowManagers.I3
+except Exception:
+    with suppress():
+        v = asyncio.run(Info.version())["branch"]
+        window_manager = WindowManagers.HYPRLAND
+
+if window_manager == WindowManagers.NONE:
+    raise Exception("Failed to detect window manager.")
 
 
 def input_with_prefill(prompt, text):
@@ -45,14 +66,14 @@ def file_opened(fn: str, output: str):
     )
 
 
-def open_paper(inf: Path):
+def open_paper_i3(inf: Path):
     """Open paper in most appropriate way, either on another monitor or on this one."""
 
     workspaces = i3.get_workspaces()
     monitors = set(x.output for x in workspaces)
     con = i3.get_tree()
 
-    if len(monitors) > 1:  # we might multiple monitors
+    if len(monitors) > 1:  # we might have multiple monitors
         current = next(x for x in workspaces if x.focused)
         monitors.discard(current.output)
         other_monitor = next(iter(monitors))  # tweak if more than 2
@@ -74,6 +95,35 @@ def open_paper(inf: Path):
 
     else:
         con.command(f'exec "zathura \\"{inf.resolve()}\\""')
+
+
+def open_paper_hyprland(inf: Path):
+    return asyncio.run(_open_paper_hyprland(inf))
+
+
+async def hyprland_file_opened(fn: str, workspace_id: int):
+    windows = [x for x in await Info.clients() if fn in x["title"]]
+    return any(x for x in windows if x["workspace"]["id"] == workspace_id)
+
+
+async def _open_paper_hyprland(inf: Path):
+    monitors = await Info.monitors()
+    if len(monitors) > 1:
+        current = next(x for x in monitors if x["focused"])["activeWorkspace"]["id"]
+        other = next(x for x in monitors if not x["focused"])["activeWorkspace"]["id"]
+        await Dispatch.workspace(other)
+        fn = str(inf.resolve())
+        await Dispatch.exec(f"zathura {fn}")
+        while not await hyprland_file_opened(fn, other):
+            await asyncio.sleep(0.1)
+        await Dispatch.workspace(current)
+
+
+def open_paper(inf: Path):
+    return {
+        WindowManagers.I3: open_paper_i3,
+        WindowManagers.HYPRLAND: open_paper_hyprland,
+    }[window_manager](inf)
 
 
 def rename_paper(inf: Path) -> Path:
