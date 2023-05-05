@@ -16,7 +16,7 @@ from typing import List
 from hyprland import Dispatch
 from hyprland.info import Info
 from i3ipc import Connection
-from PyPDF2 import PageObject, PdfFileReader, PdfFileWriter
+from PyPDF2 import PageObject, PdfReader, PdfFileWriter
 from slugify import slugify
 
 
@@ -127,13 +127,13 @@ def open_paper(inf: Path):
 
 
 def rename_paper(inf: Path) -> Path:
-    pdf = PdfFileReader(inf.open("rb"))
-    pdf.documentInfo.author
+    pdf = PdfReader(inf.open("rb"))
+    pdf.metadata.author
     while True:
-        author = input_with_prefill("Enter Principal Author: ", pdf.documentInfo.author)
+        author = input_with_prefill("Enter Principal Author: ", pdf.metadata.author)
         print("A descriptive title is something one might look the paper up under.")
         print("This is probably the subtitle.")
-        title = input_with_prefill("Enter descriptive title: ", pdf.documentInfo.title)
+        title = input_with_prefill("Enter descriptive title: ", pdf.metadata.title)
         yn = input("Continue? [Yn] ")
         if "n" not in yn.upper():
             break
@@ -237,7 +237,7 @@ def test_footer(page: PageObject):
         return None
 
 
-def find_cover_page(pdf: PdfFileReader) -> List:
+def find_cover_page(pdf: PdfReader) -> List:
     """Find cover page in pdf."""
     media_size_discrepancy, crop_size_discrepancy = get_significant_discrepancy(pdf)
 
