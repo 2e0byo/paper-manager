@@ -108,15 +108,17 @@ async def hyprland_file_opened(fn: str, workspace_id: int):
 
 async def _open_paper_hyprland(inf: Path):
     monitors = await Info.monitors()
+    fn = str(inf.resolve())
     if len(monitors) > 1:
         current = next(x for x in monitors if x["focused"])["activeWorkspace"]["id"]
         other = next(x for x in monitors if not x["focused"])["activeWorkspace"]["id"]
         await Dispatch.workspace(other)
-        fn = str(inf.resolve())
         await Dispatch.exec(f"zathura {fn}")
         while not await hyprland_file_opened(fn, other):
             await asyncio.sleep(0.1)
         await Dispatch.workspace(current)
+    else:
+        await Dispatch.exec(f"zathura {fn}")
 
 
 def open_paper(inf: Path):
