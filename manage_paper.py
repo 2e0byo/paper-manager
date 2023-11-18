@@ -16,7 +16,7 @@ from typing import List
 from hyprland import Dispatch
 from hyprland.info import Info
 from i3ipc import Connection
-from PyPDF2 import PageObject, PdfReader, PdfFileWriter
+from PyPDF2 import PageObject, PdfFileWriter, PdfReader
 from slugify import slugify
 
 
@@ -370,7 +370,6 @@ def ocr(inf: Path, lang):
 
 
 if __name__ == "__main__":
-
     from argparse import ArgumentParser
 
     parser = ArgumentParser()
