@@ -113,7 +113,7 @@ async def _open_paper_hyprland(inf: Path):
         current = next(x for x in monitors if x["focused"])["activeWorkspace"]["id"]
         other = next(x for x in monitors if not x["focused"])["activeWorkspace"]["id"]
         await Dispatch.workspace(other)
-        await Dispatch.exec(f"zathura {fn}")
+        await Dispatch.exec(f"zathura {fn!r}")
         while not await hyprland_file_opened(fn, other):
             await asyncio.sleep(0.1)
         await Dispatch.workspace(current)
